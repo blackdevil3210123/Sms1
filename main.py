@@ -3378,11 +3378,26 @@ async def main():
         raise
     finally:
         await bot.session.close()
-
 if __name__ == "__main__":
+    import threading
+    
+    def run_bot():
+        try:
+            asyncio.run(main())
+        except KeyboardInterrupt:
+            log.info("🛑 Bot stopped by user")
+        except Exception as e:
+            log.error(f"❌ Fatal error: {e}")
+    
+    # Bot ko background thread mein chalayein
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    
+    # Koyeb health check ke liye web server
     try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        log.info("🛑 Bot stopped by user")
-    except Exception as e:
-        log.error(f"❌ Fatal error: {e}")
+        import staypresent
+        staypresent.web.json({"status": "ok", "bot": "running"})
+        staypresent.run(port=int(os.getenv("PORT", 8080)))
+    except ImportError:
+        log.warning("staypresent not installed, running bot only")
+        bot_thread.join()
